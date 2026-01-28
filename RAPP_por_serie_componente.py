@@ -6,6 +6,7 @@ from tqdm import tqdm  # Para barra de progresso
 import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
+import openpyxl
 
 # 1) Pegar o identificador do estudante (CPF padronizado para conseguir conversar entre relatório de Matrículas e relatório de Notas) do relatório de Matrículas que tem Situação = Progressão Parcial' e 'Apenas Progressão Parcial'
 
@@ -98,9 +99,23 @@ df_EF_EM['CPF_Padronizado'] = (
 
 df_EF_EM['CPF_Padronizado'].nunique()
 
+# Quantidade de estudantes em RAPP por Série
+estudantes_rapp_serie = (
+    df_EF_EM
+    .groupby(['SÉRIE'])['CPF_Padronizado']
+    .nunique()
+    .reset_index(name='qtd_cpfs')
+    .sort_values('SÉRIE')
+)
+
+# Salvar em arquio Excel
+estudantes_rapp_serie.to_excel('estudantes_rapp_serie.xlsx', index=False)
+
+
 
 # Criar lista com os CPFs dos estudantes em RAPP
 cpf_lista = df_EF_EM["CPF_Padronizado"].astype(str).str.strip().unique()
+
 
 
 # 3) No concatenado do relatório de notas, considerar somente os CPFs dos estudantes em RAPP seguindo relatório de matrículas;
@@ -138,6 +153,7 @@ df_notas['CPF_Padronizado'] = (
 # Filtrar o df_notas mantendo apenas linhas cujo CPF PESSOA esteja na lista de CPFs em RAPP
 df_notas_rapp = df_notas[df_notas["CPF_Padronizado"].astype(str).isin(cpf_lista)]
 
+df_notas_rapp['CPF_Padronizado'].nunique()
 
 # 4) Filtrar somente os componentes da BNCC e estudantes dos Anos Finais e Ensino Médio
 # Manter só Anos Finais e Ensino Médio:
@@ -213,6 +229,21 @@ df_rapp_reprovados = df_rapp_limpo[df_rapp_limpo['RESULTADO FINAL'] == 'REPROVAD
 # Remover duplicata de CPF para o mesmo componente curricular (caso exista)
 df_rapp_reprovados = df_rapp_reprovados.drop_duplicates(subset=['CPF_Padronizado', 'COMPONENTE CURRICULAR'], keep='first')
 
+# Quantidade de estudantes em RAPP com comoponentes reprovados por Série
+estudantes_rapp_serie_componentes_reprovados = (
+    df_rapp_reprovados
+    .groupby(['SÉRIE'])['CPF_Padronizado']
+    .nunique()
+    .reset_index(name='qtd_cpfs')
+    .sort_values('SÉRIE')
+)
+
+# Salvar em arquivo Excel
+estudantes_rapp_serie_componentes_reprovados.to_excel('estudantes_rapp_serie_componentes_reprovados.xlsx', index=False)
+
+
+
+
 # 7) Segmentar os estudantes por Ano/ Série e e por componente e contar a quantidade de reprovações por componente para cada série.
 
 # Quantidade total de estudantes em RAPP
@@ -231,3 +262,27 @@ resumo_rapp = (
 # Salvar o resumo em um arquivo Excel
 resumo_rapp.to_excel('resumo_rapp.xlsx', index=False)
 
+
+
+####################### #################################### #####################
+# Lista de todos os CPFs únicos em RAPP do relatório de matrículas: cpf_lista
+
+# Da lista de cpf_lista , filtrar só os CPF_Padronizado que não estão no df_rapp_reprovados
+cpfs_diferenca = list(
+    set(cpf_lista) - set(df_rapp_reprovados['CPF_Padronizado'])
+)
+
+# Dataframe dos CPFs que estão em RAPP mas não têm :reprovações OU não são Anos Finais OU não são Ensino Médio OU não tem componente curricular da BNCC (estão no cpf_lista, mas não no df_rapp_reprovados)
+df_rapp_sem_reprovacao = df_notas[
+    df_notas['CPF_Padronizado'].isin(cpfs_diferenca)
+]
+
+# Salvar dataframe em um arquivo Excel
+df_rapp_sem_reprovacao.to_excel('df_rapp_sem_reprovacao.xlsx', index=False)
+
+# Tem 8 CPFs que estão em cpf_lista, mas não em df_notas
+cpfs_fora_df_notas = list(
+    set(cpf_lista) - set(df_notas['CPF_Padronizado'])
+)
+
+cpfs_fora_df_notas
