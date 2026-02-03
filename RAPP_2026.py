@@ -165,7 +165,7 @@ colunas = [
     'CPF_Padronizado'
 ]
 
-df_unico = (
+df_EF_EM_RAPP = (
     df_EF_EM[colunas]
     .groupby('CPF_Padronizado', as_index=False)
     .agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
@@ -268,8 +268,8 @@ df_mat = df_mat.rename(columns={
 # Concatenar os 2 dataframes
 df_concat = pd.concat(
     [
-        df_unico,
-        df_mat[df_unico.columns]
+        df_EF_EM_RAPP,
+        df_mat[df_EF_EM_RAPP.columns]
     ],
     ignore_index=True
 )
@@ -280,5 +280,5 @@ df_concat = df_concat.drop_duplicates(
     keep='first'
 )
 
-
-df_concat
+# Salvar o df_concat em um arquivo Excel
+df_concat.to_excel('RAPP_2026.xlsx', index=False)
